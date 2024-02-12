@@ -1,0 +1,56 @@
+---
+# create http api gw
+apiVersion: apigatewayv2.services.k8s.aws/v1alpha1
+kind: API
+metadata:
+  name: "movie-search-api"
+  namespace: movie-search
+spec:
+  name: "movie-search"
+  protocolType: HTTP
+---
+# stage
+apiVersion: apigatewayv2.services.k8s.aws/v1alpha1
+kind: Stage
+metadata:
+  name: "default-stage"
+  namespace: movie-search
+spec:
+  apiRef:
+    from:
+      name: "movie-search-api"
+  stageName: "$default"
+  autoDeploy: true
+  description: "auto deployed stage for movie-search-api"
+---
+# route-key used in path
+apiVersion: apigatewayv2.services.k8s.aws/v1alpha1
+kind: Route
+metadata:
+  name: "ack-route-vpclink"
+  namespace: movie-search
+spec:
+  apiRef:
+    from:
+      name: "movie-search-api"
+  routeKey: "ANY /{proxy+}"
+  targetRef:
+    from:
+      name: "vpc-integration"
+---
+# hook with route. this one uses a public http site as backend
+apiVersion: apigatewayv2.services.k8s.aws/v1alpha1
+kind: Integration
+metadata:
+  name: "vpc-integration"
+  namespace: movie-search
+spec:
+  apiRef:
+    from:
+      name: "movie-search-api"
+  integrationType: HTTP_PROXY
+  integrationURI: "arn:aws:elasticloadbalancing:us-east-2:652391548090:listener/app/k8s-moviesea-ingressm-1d44e1c67d/c2b7b2e93a8077dd/fe264507e022dcf3"
+  integrationMethod: ANY
+  payloadFormatVersion: "1.0"
+  connectionID: "5fi7nh" # api_gatewayv2_vpc_link_id in terraform output
+  connectionType: "VPC_LINK"
